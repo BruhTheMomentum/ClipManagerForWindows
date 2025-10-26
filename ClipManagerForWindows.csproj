@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+				<UseWPF>true</UseWPF>
+				<UseWindowsForms>true</UseWindowsForms>
+				
+			</PropertyGroup>
+		
+			<ItemGroup>
+				<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.10" />
+				<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+				<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+				<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+				<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.2" />
+			</ItemGroup>
+
+	<ItemGroup>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="ViewModels\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Assets\clip.ico">
+		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+
+</Project>
