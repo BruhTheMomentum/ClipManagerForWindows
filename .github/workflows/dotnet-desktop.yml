@@ -1,4 +1,4 @@
-name: StageManager CI
+name: ClipManagerForWindows CI
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       contents: write            # allow release-action to create GitHub Release
 
     env:
-      Solution_Name: StageManager.sln
+      Solution_Name: ClipManagerForWindows.sln
       Configuration: Release
 
     steps:
@@ -41,25 +41,25 @@ jobs:
       run: dotnet build ${{ env.Solution_Name }} --configuration ${{ env.Configuration }} --no-restore -p:Version=${{ github.run_number }}
 
     - name: Publish self-contained
-      run: dotnet publish StageManager/StageManager.csproj --configuration ${{ env.Configuration }} --runtime win-x64 --self-contained false --output ./publish -p:Version=${{ github.run_number }}
+      run: dotnet publish ClipManagerForWindows/ClipManagerForWindows.csproj --configuration ${{ env.Configuration }} --runtime win-x64 --self-contained false --output ./publish -p:Version=${{ github.run_number }}
 
     - name: Compress artifact
       shell: pwsh
-      run: Compress-Archive -Path ./publish/* -DestinationPath StageManager.zip
+      run: Compress-Archive -Path ./publish/* -DestinationPath ClipManagerForWindows.zip
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: StageManager
-        path: StageManager.zip
+        name: ClipManagerForWindows
+        path: ClipManagerForWindows.zip
 
     - name: Create GitHub Release (tag push)
       if: startsWith(github.ref, 'refs/tags/')
       uses: ncipollo/release-action@v1
       with:
         artifacts: |
-          StageManager.zip
-          publish/StageManager.exe
+          ClipManagerForWindows.zip
+          publish/ClipManagerForWindows.exe
         body: "Automated release from GitHub Actions"
         token: ${{ secrets.GITHUB_TOKEN }}
 
