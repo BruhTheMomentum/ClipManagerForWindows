@@ -133,6 +133,34 @@ ORDER BY Id DESC
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    public async Task PruneOldEntriesAsync(int maxEntries, CancellationToken ct)
+    {
+        await using var conn = CreateConnection();
+        await conn.OpenAsync(ct);
+        using var tx = conn.BeginTransaction();
+
+        await using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = @"
+            DELETE FROM ClipboardEntries
+            WHERE Id NOT IN (
+                SELECT Id FROM ClipboardEntries
+                ORDER BY Id DESC
+                LIMIT $maxEntries
+            );
+        ";
+        cmd.Parameters.AddWithValue("$maxEntries", maxEntries);
+        var deletedRows = await cmd.ExecuteNonQueryAsync(ct);
+
+        tx.Commit();
+
+        if (deletedRows > 0)
+        {
+            // Log the pruning (assuming we have access to logger)
+            System.Diagnostics.Debug.WriteLine($"Pruned {deletedRows} old clipboard entries to maintain max limit of {maxEntries}");
+        }
+    }
+
     private static ClipboardEntry ReadEntry(SqliteDataReader reader)
     {
    return new ClipboardEntry

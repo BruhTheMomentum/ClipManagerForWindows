@@ -76,6 +76,9 @@ public partial class SettingsWindow : Window
             // Update startup
             await _startup.SetEnabledAsync(LaunchOnStartupCheckBox.IsChecked == true);
 
+            // Apply the new max entries setting to HistoryManager
+            await _history.UpdateMaxEntriesAsync(maxEntries, CancellationToken.None);
+
             _logger.LogInformation("Settings saved successfully");
             Close();
         }

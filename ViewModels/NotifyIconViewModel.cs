@@ -37,10 +37,26 @@ public partial class NotifyIconViewModel : IDisposable
     {
         var contextMenu = new ContextMenuStrip();
 
-        // Recent clips
-        var recentItems = _historyManager.RecentEntries.Take(10).ToList();
+        // Recent clips - now scrollable
+        var recentItems = _historyManager.RecentEntries.ToList();
         if (recentItems.Any())
         {
+            // Create a scrollable ListBox for clipboard entries
+            var listBox = new ListBox
+            {
+                Height = 400,
+                Width = 350,
+                ScrollAlwaysVisible = true,
+                SelectionMode = SelectionMode.One,
+                BackColor = System.Drawing.Color.White,
+                ForeColor = System.Drawing.Color.Black
+            };
+
+            // Add tooltip to guide users
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(listBox, "Double-click any item to copy it to clipboard");
+
+            // Add clipboard entries to the ListBox
             foreach (var entry in recentItems)
             {
                 var preview = entry.TextContent.Replace("\r", "").Replace("\n", " ").Trim();
@@ -56,10 +72,26 @@ public partial class NotifyIconViewModel : IDisposable
                 var truncationIndicator = entry.IsTruncated ? " ⚠" : "";
                 var displayText = $"{formatBadge} {preview}{truncationIndicator}";
 
-                var menuItem = new ToolStripMenuItem(displayText);
-                menuItem.Click += (s, e) => ClipboardMarker.SetMarkedText(entry.TextContent);
-                contextMenu.Items.Add(menuItem);
+                listBox.Items.Add(new ClipboardMenuItem(displayText, entry.TextContent));
             }
+
+            // Handle double-click to copy to clipboard
+            listBox.DoubleClick += (s, e) =>
+            {
+                if (listBox.SelectedItem is ClipboardMenuItem selectedItem)
+                {
+                    ClipboardMarker.SetMarkedText(selectedItem.FullText);
+                }
+            };
+
+            // Embed the ListBox in the context menu using ToolStripControlHost
+            var host = new ToolStripControlHost(listBox)
+            {
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+
+            contextMenu.Items.Add(host);
             contextMenu.Items.Add(new ToolStripSeparator());
         }
 
@@ -95,5 +127,25 @@ public partial class NotifyIconViewModel : IDisposable
     public void Dispose()
     {
         _notifyIcon.Dispose();
+    }
+}
+
+/// <summary>
+/// Helper class to store display text and full clipboard text for ListBox items
+/// </summary>
+internal class ClipboardMenuItem
+{
+    public string DisplayText { get; }
+    public string FullText { get; }
+
+    public ClipboardMenuItem(string displayText, string fullText)
+    {
+        DisplayText = displayText;
+        FullText = fullText;
+    }
+
+    public override string ToString()
+    {
+        return DisplayText;
     }
 }

@@ -21,6 +21,7 @@ public interface IHistoryManager
     // Commands
     Task DeleteAsync(long id, CancellationToken ct);
     Task ClearAllAsync(CancellationToken ct);
+    Task UpdateMaxEntriesAsync(int maxEntries, CancellationToken ct);
 
     // Events
     event EventHandler<TruncationEventArgs>? TruncationDetected;

@@ -13,4 +13,5 @@ public interface IClipboardRepository
     Task<IReadOnlyList<ClipboardEntry>> GetRecentAsync(int take, CancellationToken ct);
     Task ClearAllAsync(CancellationToken ct);
     Task DeleteAsync(long id, CancellationToken ct);
+    Task PruneOldEntriesAsync(int maxEntries, CancellationToken ct);
 }
