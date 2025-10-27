@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -46,17 +45,23 @@ public sealed class StartupManager : IStartupManager
             }
 
             if (enabled)
-         {
-     var exePath = Assembly.GetExecutingAssembly().Location;
-       // For .NET 10, we need the exe path, not the dll
-  if (exePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-   {
-                    exePath = Path.ChangeExtension(exePath, ".exe");
- }
-      
-       key.SetValue(AppName, $"\"{exePath}\"");
-  _logger.LogInformation("Enabled startup: {path}", exePath);
-  }
+            {
+                var exePath = Environment.ProcessPath;
+                if (string.IsNullOrEmpty(exePath))
+                {
+                    _logger.LogError("Unable to determine current executable path");
+                    return Task.CompletedTask;
+                }
+
+                if (!File.Exists(exePath))
+                {
+                    _logger.LogError("Executable path does not exist: {path}", exePath);
+                    return Task.CompletedTask;
+                }
+
+                key.SetValue(AppName, $"\"{exePath}\"");
+                _logger.LogInformation("Enabled startup: {path}", exePath);
+            }
         else
             {
      key.DeleteValue(AppName, false);

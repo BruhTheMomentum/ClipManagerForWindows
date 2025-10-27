@@ -52,10 +52,7 @@ public partial class NotifyIconViewModel : IDisposable
                 ForeColor = System.Drawing.Color.Black
             };
 
-            // Add tooltip to guide users
-            var toolTip = new ToolTip();
-            toolTip.SetToolTip(listBox, "Double-click any item to copy it to clipboard");
-
+            
             // Add clipboard entries to the ListBox
             foreach (var entry in recentItems)
             {
@@ -75,12 +72,13 @@ public partial class NotifyIconViewModel : IDisposable
                 listBox.Items.Add(new ClipboardMenuItem(displayText, entry.TextContent));
             }
 
-            // Handle double-click to copy to clipboard
-            listBox.DoubleClick += (s, e) =>
+            // Handle single-click to copy to clipboard
+            listBox.Click += (s, e) =>
             {
                 if (listBox.SelectedItem is ClipboardMenuItem selectedItem)
                 {
                     ClipboardMarker.SetMarkedText(selectedItem.FullText);
+                    contextMenu.Close(); // Close the tray menu after copying
                 }
             };
 
@@ -97,14 +95,22 @@ public partial class NotifyIconViewModel : IDisposable
 
         // Settings
         var settingsItem = new ToolStripMenuItem("⚙ Settings");
-        settingsItem.Click += (s, e) => ShowSettings();
+        settingsItem.Click += (s, e) =>
+        {
+            ShowSettings();
+            contextMenu.Close(); // Close the tray menu after opening settings
+        };
         contextMenu.Items.Add(settingsItem);
 
         contextMenu.Items.Add(new ToolStripSeparator());
 
         // Clear History
         var clearItem = new ToolStripMenuItem("🗑 Clear All History");
-        clearItem.Click += async (s, e) => await _historyManager.ClearAllAsync(CancellationToken.None);
+        clearItem.Click += async (s, e) =>
+        {
+            await _historyManager.ClearAllAsync(CancellationToken.None);
+            contextMenu.Close(); // Close the tray menu after clearing history
+        };
         contextMenu.Items.Add(clearItem);
 
         contextMenu.Items.Add(new ToolStripSeparator());
