@@ -118,24 +118,30 @@ public partial class NotifyIconViewModel : IDisposable
     {
         var contextMenu = new ContextMenuStrip();
 
-        // Recent clips - now scrollable
+        // Recent clips - now scrollable with max 10 items
         var recentItems = _historyManager.RecentEntries.ToList();
         if (recentItems.Any())
         {
             // Create a scrollable ListBox for clipboard entries
             var listBox = new ListBox
             {
-                Height = 400,
-                Width = 350,
-                ScrollAlwaysVisible = true,
+                Height = 280,
+                Width = 550, 
+                MaximumSize = new System.Drawing.Size(550, 280), // Enforce maximum size
+                MinimumSize = new System.Drawing.Size(550, 280), // Enforce minimum size
+                ScrollAlwaysVisible = true, // Show scrollbar when content overflows
                 SelectionMode = SelectionMode.One,
                 BackColor = System.Drawing.Color.White,
-                ForeColor = System.Drawing.Color.Black
+                ForeColor = System.Drawing.Color.Black,
+                IntegralHeight = false // Allow partial items at bottom
             };
+
+            // Load all items to enable scrolling
+            var displayItems = recentItems.ToList();
 
             
             // Add clipboard entries to the ListBox
-            foreach (var entry in recentItems)
+            foreach (var entry in displayItems)
             {
                 var preview = entry.TextContent.Replace("\r", "").Replace("\n", " ").Trim();
                 if (preview.Length > 50) preview = preview.Substring(0, 50) + "...";
@@ -167,7 +173,9 @@ public partial class NotifyIconViewModel : IDisposable
             var host = new ToolStripControlHost(listBox)
             {
                 Padding = new Padding(0),
-                Margin = new Padding(0)
+                Margin = new Padding(0),
+                Size = new System.Drawing.Size(555, 280), // Enforce host size (increased width)
+                AutoSize = false // Prevent automatic resizing
             };
 
             contextMenu.Items.Add(host);
@@ -196,6 +204,15 @@ public partial class NotifyIconViewModel : IDisposable
 
         contextMenu.Items.Add(new ToolStripSeparator());
 
+#if DEBUG
+        // [DEV] Add Records - only in Debug builds
+        var addRecordsItem = new ToolStripMenuItem("[DEV] Add Records");
+        addRecordsItem.Click += async (s, e) => await AddTestRecordsAsync();
+        contextMenu.Items.Add(addRecordsItem);
+
+        contextMenu.Items.Add(new ToolStripSeparator());
+#endif
+
         // Quit
         var quitItem = new ToolStripMenuItem("❌ Quit");
         quitItem.Click += (s, e) => System.Windows.Application.Current.Shutdown();
@@ -203,6 +220,73 @@ public partial class NotifyIconViewModel : IDisposable
 
         _notifyIcon.ContextMenuStrip = contextMenu;
     }
+
+#if DEBUG
+    /// <summary>
+    /// Creates 150 test records for debugging the scroll functionality
+    /// </summary>
+    private async Task AddTestRecordsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Adding 150 test records for debugging");
+
+            var testContents = new[]
+            {
+                "Sample text content #",
+                "Lorem ipsum dolor sit amet #",
+                "Test clipboard entry #",
+                "Development record #",
+                "Debug data item #",
+                "Sample code snippet #",
+                "Example text #",
+                "Test data #",
+                "Development entry #",
+                "Debug content #"
+            };
+
+            var formats = new[] { "Text", "Html", "Rtf" };
+
+            for (int i = 1; i <= 150; i++)
+            {
+                var contentIndex = (i - 1) % testContents.Length;
+                var formatIndex = (i - 1) % formats.Length;
+
+                var content = testContents[contentIndex] + i;
+                var format = formats[formatIndex];
+
+                // Create a clipboard entry based on format
+                switch (format)
+                {
+                    case "Html":
+                        content = $"<p>{content}</p>";
+                        break;
+                    case "Rtf":
+                        content = $@"{{\rtf1\ansi\deff0 {{\fonttbl {{\f0 Times New Roman;}}}}\f0\fs24 {content}}}";
+                        break;
+                }
+
+                // Create the clipboard entry
+                var entry = new ClipboardEntry
+                {
+                    TextContent = content,
+                    FormatType = format,
+                    CreatedUtc = DateTime.UtcNow.AddMinutes(-i), // Stagger timestamps
+                    SourceApp = "DebugTestApp",
+                    IsTruncated = false
+                };
+
+                await _historyManager.AddAsync(entry, CancellationToken.None);
+            }
+
+            _logger.LogInformation("Successfully added 150 test records");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add test records");
+        }
+    }
+#endif
 
     /// <summary>
     /// Forces closure of all file handles for a specific file path
