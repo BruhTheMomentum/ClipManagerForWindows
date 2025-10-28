@@ -35,13 +35,13 @@ jobs:
         cache-dependency-path: '**/*.csproj'
 
     - name: Restore dependencies
-      run: dotnet restore ${{ env.Solution_Name }}
+      run: dotnet restore ClipManagerForWindows.csproj
 
     - name: Build (Release)
-      run: dotnet build ${{ env.Solution_Name }} --configuration ${{ env.Configuration }} --no-restore -p:Version=${{ github.run_number }}
+      run: dotnet build ClipManagerForWindows.csproj --configuration ${{ env.Configuration }} --no-restore -p:Version=${{ github.run_number }}
 
     - name: Publish self-contained
-      run: dotnet publish ClipManagerForWindows/ClipManagerForWindows.csproj --configuration ${{ env.Configuration }} --runtime win-x64 --self-contained false --output ./publish -p:Version=${{ github.run_number }}
+      run: dotnet publish ClipManagerForWindows.csproj --configuration ${{ env.Configuration }} --runtime win-x64 --self-contained false --output ./publish -p:Version=${{ github.run_number }}
 
     - name: Compress artifact
       shell: pwsh
