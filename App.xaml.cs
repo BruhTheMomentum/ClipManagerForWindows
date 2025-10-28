@@ -90,7 +90,7 @@ public partial class App : System.Windows.Application
         _ = _host.StartAsync();
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    public async Task StopHostAsync()
     {
         if (_host is not null)
         {
@@ -98,6 +98,11 @@ public partial class App : System.Windows.Application
             await _host.StopAsync();
             _host.Dispose();
         }
+    }
+
+    protected override async void OnExit(ExitEventArgs e)
+    {
+        await StopHostAsync();
         _singleInstanceMutex?.ReleaseMutex();
         _singleInstanceMutex?.Dispose();
         base.OnExit(e);

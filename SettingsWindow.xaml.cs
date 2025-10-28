@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using ClipManagerForWindows.Services;
+using ClipManagerForWindows.ViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace ClipManagerForWindows;
@@ -12,17 +13,20 @@ public partial class SettingsWindow : Window
     private readonly ISettingsStore _settings;
     private readonly IStartupManager _startup;
     private readonly IHistoryManager _history;
+    private readonly NotifyIconViewModel _notifyIconViewModel;
     private readonly ILogger<SettingsWindow> _logger;
 
     public SettingsWindow(
         ISettingsStore settings,
         IStartupManager startup,
         IHistoryManager history,
+        NotifyIconViewModel notifyIconViewModel,
         ILogger<SettingsWindow> logger)
     {
         _settings = settings;
         _startup = startup;
         _history = history;
+        _notifyIconViewModel = notifyIconViewModel;
         _logger = logger;
 
         InitializeComponent();
@@ -30,6 +34,7 @@ public partial class SettingsWindow : Window
         SaveButton.Click += OnSaveClick;
         CancelButton.Click += (s, e) => Close();
         ClearAllButton.Click += OnClearAllClick;
+        RemoveEntirelyButton.Click += OnRemoveEntirelyClick;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -108,6 +113,28 @@ public partial class SettingsWindow : Window
             {
                 _logger.LogError(ex, "Failed to clear all history");
                 ShowErrorDialog("Failed to clear all history.");
+            }
+        }
+    }
+
+    private async void OnRemoveEntirelyClick(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "This action cannot be undone",
+            "Remove ClipManager Entirely",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                await _notifyIconViewModel.RemoveEntirelyAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to remove ClipManager entirely");
+                ShowErrorDialog("Failed to remove ClipManager entirely.");
             }
         }
     }

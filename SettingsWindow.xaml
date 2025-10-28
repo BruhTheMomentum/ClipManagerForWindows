@@ -72,6 +72,19 @@
                         <TextBlock Text="(Theme support coming soon)" FontStyle="Italic" Foreground="Gray" Margin="0,5,0,0"/>
                     </StackPanel>
                 </GroupBox>
+
+                <!-- Danger Zone -->
+                <GroupBox Header="Danger Zone" Margin="0,0,0,15" BorderBrush="IndianRed">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="⚠️ Destructive Actions" FontWeight="Bold" Foreground="IndianRed" Margin="0,0,0,10"/>
+                        <Button x:Name="RemoveEntirelyButton" Content="🗑️ Remove Entirely"
+                                Background="IndianRed" Foreground="White"
+                                Width="150" HorizontalAlignment="Left"/>
+                        <TextBlock Text="This will completely remove ClipManagerForWindows including all data and settings."
+                                   FontStyle="Italic" Foreground="Gray" FontSize="11"
+                                   Margin="0,5,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </GroupBox>
             </StackPanel>
         </ScrollViewer>
 
