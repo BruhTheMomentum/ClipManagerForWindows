@@ -96,6 +96,7 @@ public partial class NotifyIconViewModel : IDisposable
     private readonly IStartupManager _startupManager;
     private readonly ILogger<NotifyIconViewModel> _logger;
     private readonly NotifyIcon _notifyIcon;
+    private int _hoveredItemIndex = -1; // Track which item is being hovered
 
     public NotifyIconViewModel(IServiceProvider serviceProvider, IHistoryManager historyManager, IStartupManager startupManager, ILogger<NotifyIconViewModel> logger)
     {
@@ -133,7 +134,8 @@ public partial class NotifyIconViewModel : IDisposable
                 SelectionMode = SelectionMode.One,
                 BackColor = System.Drawing.Color.White,
                 ForeColor = System.Drawing.Color.Black,
-                IntegralHeight = false // Allow partial items at bottom
+                IntegralHeight = false, // Allow partial items at bottom
+                DrawMode = DrawMode.OwnerDrawFixed // Enable custom drawing for hover effects
             };
 
             // Load all items to enable scrolling
@@ -146,15 +148,7 @@ public partial class NotifyIconViewModel : IDisposable
                 var preview = entry.TextContent.Replace("\r", "").Replace("\n", " ").Trim();
                 if (preview.Length > 50) preview = preview.Substring(0, 50) + "...";
 
-                var formatBadge = entry.FormatType switch
-                {
-                    "Html" => "🌐",
-                    "Rtf" => "📝",
-                    _ => "📄"
-                };
-
-                var truncationIndicator = entry.IsTruncated ? " ⚠" : "";
-                var displayText = $"{formatBadge} {preview}{truncationIndicator}";
+                var displayText = preview;
 
                 listBox.Items.Add(new ClipboardMenuItem(displayText, entry.TextContent));
             }
@@ -166,6 +160,45 @@ public partial class NotifyIconViewModel : IDisposable
                 {
                     ClipboardMarker.SetMarkedText(selectedItem.FullText);
                     contextMenu.Close(); // Close the tray menu after copying
+                }
+            };
+
+            // Handle custom drawing for hover effects
+            listBox.DrawItem += (s, e) =>
+            {
+                e.DrawBackground();
+                e.DrawFocusRectangle();
+
+                // Set hover background color if this item is being hovered
+                if (e.Index == _hoveredItemIndex)
+                {
+                    e.Graphics.FillRectangle(new SolidBrush(System.Drawing.Color.FromArgb(227, 242, 253)), e.Bounds);
+                }
+
+                // Draw the text
+                var textBrush = new SolidBrush(e.ForeColor);
+                var textFont = e.Font ?? new System.Drawing.Font("Segoe UI", 9f);
+                e.Graphics.DrawString(listBox.Items[e.Index].ToString(), textFont, textBrush, e.Bounds.X + 5, e.Bounds.Y + 2);
+            };
+
+            // Handle mouse movement for hover detection
+            listBox.MouseMove += (s, e) =>
+            {
+                var index = listBox.IndexFromPoint(e.Location);
+                if (index != _hoveredItemIndex)
+                {
+                    _hoveredItemIndex = index;
+                    listBox.Invalidate(); // Redraw to show hover effect
+                }
+            };
+
+            // Handle mouse leave to clear hover
+            listBox.MouseLeave += (s, e) =>
+            {
+                if (_hoveredItemIndex != -1)
+                {
+                    _hoveredItemIndex = -1;
+                    listBox.Invalidate(); // Redraw to remove hover effect
                 }
             };
 
@@ -245,35 +278,19 @@ public partial class NotifyIconViewModel : IDisposable
                 "Debug content #"
             };
 
-            var formats = new[] { "Text", "Html", "Rtf" };
 
             for (int i = 1; i <= 150; i++)
             {
                 var contentIndex = (i - 1) % testContents.Length;
-                var formatIndex = (i - 1) % formats.Length;
 
                 var content = testContents[contentIndex] + i;
-                var format = formats[formatIndex];
 
-                // Create a clipboard entry based on format
-                switch (format)
-                {
-                    case "Html":
-                        content = $"<p>{content}</p>";
-                        break;
-                    case "Rtf":
-                        content = $@"{{\rtf1\ansi\deff0 {{\fonttbl {{\f0 Times New Roman;}}}}\f0\fs24 {content}}}";
-                        break;
-                }
 
                 // Create the clipboard entry
                 var entry = new ClipboardEntry
                 {
                     TextContent = content,
-                    FormatType = format,
-                    CreatedUtc = DateTime.UtcNow.AddMinutes(-i), // Stagger timestamps
-                    SourceApp = "DebugTestApp",
-                    IsTruncated = false
+                    CreatedUtc = DateTime.UtcNow.AddMinutes(-i) // Stagger timestamps
                 };
 
                 await _historyManager.AddAsync(entry, CancellationToken.None);

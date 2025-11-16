@@ -53,7 +53,7 @@ public partial class App : System.Windows.Application
                 services.AddSingleton<ISettingsStore, SqliteSettingsStore>();
 
                 // Core Services
-                services.AddSingleton<IFormatRouter, FormatRouter>();
+                services.AddSingleton<ISimpleTextExtractor, SimpleTextExtractor>();
                 services.AddSingleton<IHistoryManager, HistoryManager>();
                 services.AddSingleton<ISourceAppResolver, SourceAppResolver>();
                 services.AddSingleton<INotificationService, NotificationService>();
@@ -75,13 +75,6 @@ public partial class App : System.Windows.Application
             .GetSection("App").GetValue<string>("DatabasePath"));
         _host.Services.GetRequiredService<ILogger<App>>().LogInformation("DB path: {db}", dbPath);
 
-        // Wire up truncation notifications
-        var historyManager = _host.Services.GetRequiredService<IHistoryManager>();
-        var notificationService = _host.Services.GetRequiredService<INotificationService>();
-        historyManager.TruncationDetected += async (s, e) =>
-        {
-            await notificationService.ShowTruncationWarningAsync(e.OriginalLength, e.FormatType);
-        };
         
         // Initialize the tray icon view model which will in turn create the icon
         _host.Services.GetRequiredService<NotifyIconViewModel>();

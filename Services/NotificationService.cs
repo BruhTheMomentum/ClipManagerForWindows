@@ -15,20 +15,6 @@ public sealed class NotificationService : INotificationService
         _logger = logger;
     }
 
-    public Task ShowTruncationWarningAsync(long originalLength, string formatType)
-    {
-        var sizeMB = originalLength / (1024.0 * 1024.0);
-        var message = $"Clipboard content was truncated from {sizeMB:F2} MB to 1 GB limit.\nFormat: {formatType}";
-   
-        _logger.LogWarning("Truncation: {size} MB, Format: {format}", sizeMB, formatType);
-        
-        WpfApplication.Current.Dispatcher.Invoke(() =>
-  {
-    WpfMessageBox.Show(message, "Content Truncated", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-      });
-
-        return Task.CompletedTask;
-    }
 
     public Task ShowErrorAsync(string title, string message)
   {

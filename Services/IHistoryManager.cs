@@ -23,12 +23,4 @@ public interface IHistoryManager
     Task ClearAllAsync(CancellationToken ct);
     Task UpdateMaxEntriesAsync(int maxEntries, CancellationToken ct);
 
-    // Events
-    event EventHandler<TruncationEventArgs>? TruncationDetected;
-}
-
-public sealed class TruncationEventArgs : EventArgs
-{
-    public long OriginalLength { get; init; }
-    public string FormatType { get; init; } = string.Empty;
 }

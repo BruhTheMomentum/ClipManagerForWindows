@@ -1,4 +1,3 @@
 <Solution>
-  <Project Path="../ClipManagerForWindowsTesting/ClipManagerForWindowsTesting.csproj" Id="e22dccbc-d78f-446c-bfea-f0fbf31aa96d" />
   <Project Path="ClipManagerForWindows.csproj" />
 </Solution>

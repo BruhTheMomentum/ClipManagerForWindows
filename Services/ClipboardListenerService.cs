@@ -22,7 +22,7 @@ public interface IClipboardListenerService
 public sealed class ClipboardListenerService : BackgroundService, IClipboardListenerService
 {
     private readonly ILogger<ClipboardListenerService> _logger;
-    private readonly IFormatRouter _router;
+    private readonly ISimpleTextExtractor _textExtractor;
     private readonly IHistoryManager _history;
     private readonly IConfiguration _config;
     private readonly ISourceAppResolver _sourceAppResolver;
@@ -35,13 +35,13 @@ public sealed class ClipboardListenerService : BackgroundService, IClipboardList
 
     public ClipboardListenerService(
         ILogger<ClipboardListenerService> logger,
- IFormatRouter router,
+ ISimpleTextExtractor textExtractor,
     IHistoryManager history,
         IConfiguration configuration,
     ISourceAppResolver sourceAppResolver)
     {
         _logger = logger;
-        _router = router;
+        _textExtractor = textExtractor;
         _history = history;
         _config = configuration;
         _sourceAppResolver = sourceAppResolver;
@@ -120,7 +120,7 @@ public sealed class ClipboardListenerService : BackgroundService, IClipboardList
                     return IntPtr.Zero;
                 }
 
-                if (_router.TryExtract(out var clipContent))
+                if (_textExtractor.TryExtractText(out var text))
                 {
                     var source = _sourceAppResolver.TryGetForegroundProcessName();
                     if (!string.IsNullOrWhiteSpace(source) &&
@@ -132,12 +132,7 @@ public sealed class ClipboardListenerService : BackgroundService, IClipboardList
                     var entry = new ClipboardEntry
                     {
                         CreatedUtc = DateTime.UtcNow,
-                        TextContent = clipContent.Text,
-                        SourceApp = source,
-                        Hash = HistoryManager.ComputeHash(clipContent.Text),
-                        FormatType = clipContent.FormatType,
-                        IsTruncated = clipContent.IsTruncated,
-                        OriginalLength = clipContent.IsTruncated ? clipContent.OriginalLength : null
+                        TextContent = text
                     };
 
                     _ = _history.AddAsync(entry, CancellationToken.None);

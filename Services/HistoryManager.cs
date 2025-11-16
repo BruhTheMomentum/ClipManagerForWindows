@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -20,13 +17,11 @@ public sealed class HistoryManager : IHistoryManager
     private readonly ILogger<HistoryManager> _logger;
     private readonly IClipboardRepository _repo;
     private readonly ISettingsStore _settings;
-    private readonly ConcurrentDictionary<string, bool> _hashes = new();
     private readonly Channel<ClipboardEntry> _queue = Channel.CreateUnbounded<ClipboardEntry>();
     private int _maxRecent;
 
     public ObservableCollection<ClipboardEntry> RecentEntries { get; } = new();
 
-    public event EventHandler<TruncationEventArgs>? TruncationDetected;
 
     public HistoryManager(ILogger<HistoryManager> logger, IClipboardRepository repo, ISettingsStore settings)
     {
@@ -55,7 +50,6 @@ public sealed class HistoryManager : IHistoryManager
          foreach (var r in recent)
          {
              RecentEntries.Add(r);
-             _hashes[r.Hash] = true;
          }
      });
 
@@ -64,22 +58,6 @@ public sealed class HistoryManager : IHistoryManager
 
     public async Task AddAsync(ClipboardEntry entry, CancellationToken ct)
     {
-        if (_hashes.ContainsKey(entry.Hash))
-        {
-            _logger.LogDebug("Duplicate entry ignored");
-            return;
-        }
-
-        // Raise truncation event if needed
-        if (entry.IsTruncated)
-        {
-            TruncationDetected?.Invoke(this, new TruncationEventArgs
-            {
-                OriginalLength = entry.OriginalLength ?? 0,
-                FormatType = entry.FormatType
-            });
-        }
-
         await _queue.Writer.WriteAsync(entry, ct);
     }
 
@@ -93,7 +71,6 @@ public sealed class HistoryManager : IHistoryManager
                 {
                     var id = await _repo.InsertAsync(entry, CancellationToken.None);
                     entry.Id = id;
-                    _hashes[entry.Hash] = true;
 
                     await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
                      {
@@ -102,8 +79,8 @@ public sealed class HistoryManager : IHistoryManager
                              RecentEntries.RemoveAt(RecentEntries.Count - 1);
                      });
 
-                    _logger.LogInformation("Saved entry {id} ({len} chars, {format})",
-                  id, entry.TextContent.Length, entry.FormatType);
+                    _logger.LogInformation("Saved entry {id} ({len} chars)",
+                  id, entry.TextContent.Length);
                 }
                 catch (Exception ex)
                 {
@@ -113,13 +90,6 @@ public sealed class HistoryManager : IHistoryManager
         }
     }
 
-    public static string ComputeHash(string content)
-    {
-        using var sha = SHA256.Create();
-        var payload = Encoding.UTF8.GetBytes(content);
-        var hash = sha.ComputeHash(payload);
-        return Convert.ToHexString(hash);
-    }
 
     public Task<IReadOnlyList<ClipboardEntry>> GetRecentAsync(int take, CancellationToken ct)
     {
@@ -146,7 +116,6 @@ public sealed class HistoryManager : IHistoryManager
               RecentEntries.Clear();
           });
 
-        _hashes.Clear();
     }
 
     public async Task UpdateMaxEntriesAsync(int maxEntries, CancellationToken ct)
@@ -176,9 +145,7 @@ public sealed class HistoryManager : IHistoryManager
             // Remove excess entries from memory (oldest first)
             while (RecentEntries.Count > maxEntries)
             {
-                var removedEntry = RecentEntries[RecentEntries.Count - 1];
                 RecentEntries.RemoveAt(RecentEntries.Count - 1);
-                _hashes.TryRemove(removedEntry.Hash, out _);
             }
         });
 
