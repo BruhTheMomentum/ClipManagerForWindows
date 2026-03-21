@@ -40,25 +40,28 @@ jobs:
     - name: Build (Release)
       run: dotnet build ClipManagerForWindows.csproj --configuration ${{ env.Configuration }} --no-restore -p:Version=${{ github.run_number }}
 
-    - name: Publish self-contained
-      run: dotnet publish ClipManagerForWindows.csproj --configuration ${{ env.Configuration }} --runtime win-x64 --self-contained false --output ./publish -p:Version=${{ github.run_number }}
-
-    - name: Compress artifact
-      shell: pwsh
-      run: Compress-Archive -Path ./publish/* -DestinationPath ClipManagerForWindows.zip
+    - name: Publish self-contained single file
+      run: >
+        dotnet publish ClipManagerForWindows.csproj
+        --configuration ${{ env.Configuration }}
+        --runtime win-x64
+        --self-contained true
+        -p:PublishSingleFile=true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        --output ./publish
+        -p:Version=${{ github.run_number }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ClipManagerForWindows
-        path: ClipManagerForWindows.zip
+        path: publish/ClipManagerForWindows.exe
 
     - name: Create GitHub Release (tag push)
       if: startsWith(github.ref, 'refs/tags/')
       uses: ncipollo/release-action@v1
       with:
         artifacts: |
-          ClipManagerForWindows.zip
           publish/ClipManagerForWindows.exe
         body: "Automated release from GitHub Actions"
         token: ${{ secrets.GITHUB_TOKEN }}

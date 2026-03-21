@@ -1,14 +1,12 @@
 using System;
 using System.IO;
 using System.Drawing;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using ClipManagerForWindows.Infrastructure;
-using ClipManagerForWindows.Models;
 using ClipManagerForWindows.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -96,13 +94,19 @@ public partial class NotifyIconViewModel : IDisposable
     private readonly IStartupManager _startupManager;
     private readonly ILogger<NotifyIconViewModel> _logger;
     private readonly NotifyIcon _notifyIcon;
-    private int _hoveredItemIndex = -1; // Track which item is being hovered
+    private readonly TrayPopupWindow _popupWindow;
 
-    public NotifyIconViewModel(IServiceProvider serviceProvider, IHistoryManager historyManager, IStartupManager startupManager, ILogger<NotifyIconViewModel> logger)
+    public NotifyIconViewModel(
+        IServiceProvider serviceProvider,
+        IHistoryManager historyManager,
+        IStartupManager startupManager,
+        TrayPopupWindow popupWindow,
+        ILogger<NotifyIconViewModel> logger)
     {
         _serviceProvider = serviceProvider;
         _historyManager = historyManager;
         _startupManager = startupManager;
+        _popupWindow = popupWindow;
         _logger = logger;
 
         _notifyIcon = new NotifyIcon();
@@ -110,200 +114,19 @@ public partial class NotifyIconViewModel : IDisposable
         _notifyIcon.Text = "Clip Manager";
         _notifyIcon.Visible = true;
 
-        BuildMenu();
-
-        _historyManager.RecentEntries.CollectionChanged += (s, e) => System.Windows.Application.Current.Dispatcher.Invoke(BuildMenu);
-    }
-
-    private void BuildMenu()
-    {
-        var contextMenu = new ContextMenuStrip();
-
-        // Recent clips - now scrollable with max 10 items
-        var recentItems = _historyManager.RecentEntries.ToList();
-        if (recentItems.Any())
+        _notifyIcon.MouseClick += (s, e) =>
         {
-            // Create a scrollable ListBox for clipboard entries
-            var listBox = new ListBox
-            {
-                Height = 280,
-                Width = 550, 
-                MaximumSize = new System.Drawing.Size(550, 280), // Enforce maximum size
-                MinimumSize = new System.Drawing.Size(550, 280), // Enforce minimum size
-                ScrollAlwaysVisible = true, // Show scrollbar when content overflows
-                SelectionMode = SelectionMode.One,
-                BackColor = System.Drawing.Color.White,
-                ForeColor = System.Drawing.Color.Black,
-                IntegralHeight = false, // Allow partial items at bottom
-                DrawMode = DrawMode.OwnerDrawFixed // Enable custom drawing for hover effects
-            };
-
-            // Load all items to enable scrolling
-            var displayItems = recentItems.ToList();
-
-            
-            // Add clipboard entries to the ListBox
-            foreach (var entry in displayItems)
-            {
-                var preview = entry.TextContent.Replace("\r", "").Replace("\n", " ").Trim();
-                if (preview.Length > 50) preview = preview.Substring(0, 50) + "...";
-
-                var displayText = preview;
-
-                listBox.Items.Add(new ClipboardMenuItem(displayText, entry.TextContent));
-            }
-
-            // Handle single-click to copy to clipboard
-            listBox.Click += (s, e) =>
-            {
-                if (listBox.SelectedItem is ClipboardMenuItem selectedItem)
-                {
-                    ClipboardMarker.SetMarkedText(selectedItem.FullText);
-                    contextMenu.Close(); // Close the tray menu after copying
-                }
-            };
-
-            // Handle custom drawing for hover effects
-            listBox.DrawItem += (s, e) =>
-            {
-                e.DrawBackground();
-                e.DrawFocusRectangle();
-
-                // Set hover background color if this item is being hovered
-                if (e.Index == _hoveredItemIndex)
-                {
-                    e.Graphics.FillRectangle(new SolidBrush(System.Drawing.Color.FromArgb(227, 242, 253)), e.Bounds);
-                }
-
-                // Draw the text
-                var textBrush = new SolidBrush(e.ForeColor);
-                var textFont = e.Font ?? new System.Drawing.Font("Segoe UI", 9f);
-                e.Graphics.DrawString(listBox.Items[e.Index].ToString(), textFont, textBrush, e.Bounds.X + 5, e.Bounds.Y + 2);
-            };
-
-            // Handle mouse movement for hover detection
-            listBox.MouseMove += (s, e) =>
-            {
-                var index = listBox.IndexFromPoint(e.Location);
-                if (index != _hoveredItemIndex)
-                {
-                    _hoveredItemIndex = index;
-                    listBox.Invalidate(); // Redraw to show hover effect
-                }
-            };
-
-            // Handle mouse leave to clear hover
-            listBox.MouseLeave += (s, e) =>
-            {
-                if (_hoveredItemIndex != -1)
-                {
-                    _hoveredItemIndex = -1;
-                    listBox.Invalidate(); // Redraw to remove hover effect
-                }
-            };
-
-            // Embed the ListBox in the context menu using ToolStripControlHost
-            var host = new ToolStripControlHost(listBox)
-            {
-                Padding = new Padding(0),
-                Margin = new Padding(0),
-                Size = new System.Drawing.Size(555, 280), // Enforce host size (increased width)
-                AutoSize = false // Prevent automatic resizing
-            };
-
-            contextMenu.Items.Add(host);
-            contextMenu.Items.Add(new ToolStripSeparator());
-        }
-
-        // Settings
-        var settingsItem = new ToolStripMenuItem("⚙ Settings");
-        settingsItem.Click += (s, e) =>
-        {
-            ShowSettings();
-            contextMenu.Close(); // Close the tray menu after opening settings
+            Application.Current.Dispatcher.Invoke(TogglePopup);
         };
-        contextMenu.Items.Add(settingsItem);
-
-        contextMenu.Items.Add(new ToolStripSeparator());
-
-        // Clear History
-        var clearItem = new ToolStripMenuItem("🗑 Clear All History");
-        clearItem.Click += async (s, e) =>
-        {
-            await _historyManager.ClearAllAsync(CancellationToken.None);
-            contextMenu.Close(); // Close the tray menu after clearing history
-        };
-        contextMenu.Items.Add(clearItem);
-
-        contextMenu.Items.Add(new ToolStripSeparator());
-
-#if DEBUG
-        // [DEV] Add Records - only in Debug builds
-        var addRecordsItem = new ToolStripMenuItem("[DEV] Add Records");
-        addRecordsItem.Click += async (s, e) => await AddTestRecordsAsync();
-        contextMenu.Items.Add(addRecordsItem);
-
-        contextMenu.Items.Add(new ToolStripSeparator());
-#endif
-
-        // Quit
-        var quitItem = new ToolStripMenuItem("❌ Quit");
-        quitItem.Click += (s, e) => System.Windows.Application.Current.Shutdown();
-        contextMenu.Items.Add(quitItem);
-
-        _notifyIcon.ContextMenuStrip = contextMenu;
     }
 
-#if DEBUG
-    /// <summary>
-    /// Creates 150 test records for debugging the scroll functionality
-    /// </summary>
-    private async Task AddTestRecordsAsync()
+    private void TogglePopup()
     {
-        try
-        {
-            _logger.LogInformation("Adding 150 test records for debugging");
-
-            var testContents = new[]
-            {
-                "Sample text content #",
-                "Lorem ipsum dolor sit amet #",
-                "Test clipboard entry #",
-                "Development record #",
-                "Debug data item #",
-                "Sample code snippet #",
-                "Example text #",
-                "Test data #",
-                "Development entry #",
-                "Debug content #"
-            };
-
-
-            for (int i = 1; i <= 150; i++)
-            {
-                var contentIndex = (i - 1) % testContents.Length;
-
-                var content = testContents[contentIndex] + i;
-
-
-                // Create the clipboard entry
-                var entry = new ClipboardEntry
-                {
-                    TextContent = content,
-                    CreatedUtc = DateTime.UtcNow.AddMinutes(-i) // Stagger timestamps
-                };
-
-                await _historyManager.AddAsync(entry, CancellationToken.None);
-            }
-
-            _logger.LogInformation("Successfully added 150 test records");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to add test records");
-        }
+        if (_popupWindow.IsVisible)
+            _popupWindow.HidePopup();
+        else
+            _popupWindow.ShowPopup();
     }
-#endif
 
     /// <summary>
     /// Forces closure of all file handles for a specific file path
@@ -437,9 +260,8 @@ public partial class NotifyIconViewModel : IDisposable
             var databasePath = AppPaths.GetDatabasePath(null);
             var appDataDir = AppPaths.GetAppDataDirectory();
 
-
-            // Close context menu to prevent UI interactions
-            _notifyIcon.ContextMenuStrip?.Close();
+            // Hide popup to prevent UI interactions
+            _popupWindow.HidePopup();
 
             // Stop the host to close all database connections
             var app = (App)Application.Current;
@@ -500,35 +322,8 @@ public partial class NotifyIconViewModel : IDisposable
         }
     }
 
-    private void ShowSettings()
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var settingsWindow = scope.ServiceProvider.GetRequiredService<SettingsWindow>();
-        settingsWindow.ShowDialog();
-    }
-
     public void Dispose()
     {
         _notifyIcon.Dispose();
-    }
-}
-
-/// <summary>
-/// Helper class to store display text and full clipboard text for ListBox items
-/// </summary>
-internal class ClipboardMenuItem
-{
-    public string DisplayText { get; }
-    public string FullText { get; }
-
-    public ClipboardMenuItem(string displayText, string fullText)
-    {
-        DisplayText = displayText;
-        FullText = fullText;
-    }
-
-    public override string ToString()
-    {
-        return DisplayText;
     }
 }

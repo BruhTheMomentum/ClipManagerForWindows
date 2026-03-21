@@ -21,10 +21,10 @@ public sealed class SimpleTextExtractor : ISimpleTextExtractor
             var dataObj = WpfClipboard.GetDataObject();
             if (dataObj == null) return false;
 
-            // Only try to get plain text - no format priority system
-            if (dataObj.GetDataPresent(WpfDataFormats.Text))
+            // Use UnicodeText to preserve all characters (Text is ANSI-only)
+            if (dataObj.GetDataPresent(WpfDataFormats.UnicodeText))
             {
-                var clipboardText = dataObj.GetData(WpfDataFormats.Text) as string;
+                var clipboardText = dataObj.GetData(WpfDataFormats.UnicodeText) as string;
                 if (!string.IsNullOrEmpty(clipboardText))
                 {
                     text = clipboardText;

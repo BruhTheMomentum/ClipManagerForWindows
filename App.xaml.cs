@@ -66,6 +66,7 @@ public partial class App : System.Windows.Application
                 services.AddHostedService<ClipboardListenerService>();
 
                 // Windows
+                services.AddSingleton<TrayPopupWindow>();
                 services.AddTransient<SettingsWindow>();
             })
             .Build();
@@ -75,7 +76,11 @@ public partial class App : System.Windows.Application
             .GetSection("App").GetValue<string>("DatabasePath"));
         _host.Services.GetRequiredService<ILogger<App>>().LogInformation("DB path: {db}", dbPath);
 
-        
+        // Apply saved theme
+        var settingsStore = _host.Services.GetRequiredService<ISettingsStore>();
+        var savedTheme = settingsStore.GetAsync("Theme", System.Threading.CancellationToken.None).GetAwaiter().GetResult() ?? "System";
+        ThemeManager.ApplyTheme(savedTheme);
+
         // Initialize the tray icon view model which will in turn create the icon
         _host.Services.GetRequiredService<NotifyIconViewModel>();
 

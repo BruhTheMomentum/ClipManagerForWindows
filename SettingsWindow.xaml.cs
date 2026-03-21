@@ -2,9 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using ClipManagerForWindows.Services;
 using ClipManagerForWindows.ViewModels;
 using Microsoft.Extensions.Logging;
+using WpfControls = System.Windows.Controls;
 
 namespace ClipManagerForWindows;
 
@@ -37,6 +39,16 @@ public partial class SettingsWindow : Window
         RemoveEntirelyButton.Click += OnRemoveEntirelyClick;
     }
 
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        DragMove();
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         try
@@ -44,11 +56,22 @@ public partial class SettingsWindow : Window
             // Load settings
             var maxEntries = await _settings.GetAsync("MaxEntries", CancellationToken.None) ?? "500";
             var retentionDays = await _settings.GetAsync("RetentionDays", CancellationToken.None) ?? "0";
+            var savedTheme = await _settings.GetAsync("Theme", CancellationToken.None) ?? "System";
             var startupEnabled = await _startup.IsEnabledAsync();
 
             MaxEntriesTextBox.Text = maxEntries;
             RetentionDaysTextBox.Text = retentionDays;
             LaunchOnStartupCheckBox.IsChecked = startupEnabled;
+
+            // Select the saved theme in the combo box
+            foreach (System.Windows.Controls.ComboBoxItem item in ThemeComboBox.Items)
+            {
+                if ((string)item.Content == savedTheme)
+                {
+                    ThemeComboBox.SelectedItem = item;
+                    break;
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -77,6 +100,11 @@ public partial class SettingsWindow : Window
             // Save settings
             await _settings.SetAsync("MaxEntries", maxEntries.ToString(), CancellationToken.None);
             await _settings.SetAsync("RetentionDays", retentionDays.ToString(), CancellationToken.None);
+
+            // Save theme
+            var selectedTheme = (ThemeComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content as string ?? "System";
+            await _settings.SetAsync("Theme", selectedTheme, CancellationToken.None);
+            ThemeManager.ApplyTheme(selectedTheme);
 
             // Update startup
             await _startup.SetEnabledAsync(LaunchOnStartupCheckBox.IsChecked == true);
@@ -137,6 +165,13 @@ public partial class SettingsWindow : Window
                 ShowErrorDialog("Failed to remove ClipManager entirely.");
             }
         }
+    }
+
+    private void OnThemeSelectionChanged(object sender, WpfControls.SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded) return; // skip during initial load
+        var selectedTheme = (ThemeComboBox.SelectedItem as WpfControls.ComboBoxItem)?.Content as string ?? "System";
+        ThemeManager.ApplyTheme(selectedTheme);
     }
 
     private void ShowErrorDialog(string message)
