@@ -23,6 +23,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -40,18 +41,33 @@
             <!-- Top Separator -->
             <Border Grid.Row="1" Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,0,0,4"/>
 
+            <!-- Search Bar -->
+            <Grid Grid.Row="2" Margin="8,4,8,4">
+                <TextBox x:Name="SearchTextBox"
+                         Style="{DynamicResource ThemedTextBox}"
+                         TextChanged="OnSearchTextChanged"/>
+                <TextBlock x:Name="SearchPlaceholder"
+                           Text="Search clipboard history..."
+                           Foreground="{DynamicResource PlaceholderTextBrush}"
+                           FontFamily="Segoe UI"
+                           FontSize="13"
+                           IsHitTestVisible="False"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"/>
+            </Grid>
+
             <!-- Clipboard Entries List -->
             <ListBox x:Name="EntriesListBox"
-                     Grid.Row="2"
+                     Grid.Row="3"
                      ItemsSource="{Binding RecentEntries}"
                      ItemTemplate="{DynamicResource ClipboardEntryTemplate}"
                      ItemContainerStyle="{DynamicResource ClipboardEntryListItemStyle}"
+                     AlternationCount="1000"
                      Background="Transparent"
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     VirtualizingPanel.IsVirtualizing="True"
-                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     VirtualizingPanel.IsVirtualizing="False"
                      PreviewMouseLeftButtonUp="OnEntryClicked"
                      PreviewMouseRightButtonUp="OnEntryRightClicked">
                 <ListBox.Resources>
@@ -66,7 +82,7 @@
 
             <!-- Empty State -->
             <TextBlock x:Name="EmptyStateText"
-                       Grid.Row="2"
+                       Grid.Row="3"
                        Text="No clipboard entries yet"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        FontFamily="Segoe UI"
@@ -76,10 +92,10 @@
                        Visibility="Collapsed"/>
 
             <!-- Bottom Separator -->
-            <Border Grid.Row="3" Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,4,0,4"/>
+            <Border Grid.Row="4" Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,4,0,4"/>
 
             <!-- Action Buttons -->
-            <StackPanel Grid.Row="4" Margin="0,0,0,6">
+            <StackPanel Grid.Row="5" Margin="0,0,0,6">
                 <Button Content="Settings" Style="{DynamicResource TrayMenuButtonStyle}" Click="OnSettingsClick"/>
                 <Button Content="Clear All History" Style="{DynamicResource TrayMenuButtonStyle}" Click="OnClearAllClick"/>
                 <Button x:Name="DevAddRecordsButton" Content="[DEV] Add Records"

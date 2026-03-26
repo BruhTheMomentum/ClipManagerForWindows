@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using ClipManagerForWindows.Infrastructure;
@@ -21,8 +23,12 @@ public partial class TrayPopupWindow : Window
     private readonly IHistoryManager _historyManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TrayPopupWindow> _logger;
-
     public ObservableCollection<ClipboardEntry> RecentEntries => _historyManager.RecentEntries;
+
+    private ICollectionView? EntriesView =>
+        EntriesListBox?.ItemsSource != null
+            ? CollectionViewSource.GetDefaultView(EntriesListBox.ItemsSource)
+            : null;
 
     public TrayPopupWindow(
         IHistoryManager historyManager,
@@ -53,9 +59,10 @@ public partial class TrayPopupWindow : Window
 
     public void ShowPopup()
     {
+        UpdateEmptyState();
         var workArea = SystemParameters.WorkArea;
         Left = workArea.Right - Width - 12;
-        Top = workArea.Bottom - Height - 12;
+        Top = workArea.Bottom - Height - 24;
 
         Opacity = 0;
         Show();
@@ -68,10 +75,13 @@ public partial class TrayPopupWindow : Window
         };
         BeginAnimation(OpacityProperty, fadeIn);
         BeginAnimation(TopProperty, slideUp);
+
+        SearchTextBox.Focus();
     }
 
     public void HidePopup()
     {
+        SearchTextBox.Text = string.Empty;
         Hide();
     }
 
@@ -83,10 +93,69 @@ public partial class TrayPopupWindow : Window
 
     private void OnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == System.Windows.Input.Key.Escape)
+        if (e.Key == Key.Escape)
+        {
             HidePopup();
-        else if (e.Key == System.Windows.Input.Key.Delete)
+        }
+        else if (e.Key == Key.Delete && !SearchTextBox.IsFocused)
+        {
             DeleteSelectedEntry();
+        }
+        else if (Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            int? index = e.Key switch
+            {
+                Key.D1 => 0,
+                Key.D2 => 1,
+                Key.D3 => 2,
+                _ => null
+            };
+
+            if (index.HasValue)
+            {
+                CopyEntryByVisibleIndex(index.Value);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void CopyEntryByVisibleIndex(int visibleIndex)
+    {
+        if (visibleIndex < EntriesListBox.Items.Count)
+        {
+            var entry = EntriesListBox.Items[visibleIndex] as ClipboardEntry;
+            if (entry != null)
+            {
+                ClipboardMarker.SetMarkedText(entry.TextContent);
+                HidePopup();
+            }
+        }
+    }
+
+    private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        // Guard: this can fire during InitializeComponent before fields are ready
+        if (EntriesView == null || SearchPlaceholder == null)
+            return;
+
+        var searchText = SearchTextBox.Text;
+
+        SearchPlaceholder.Visibility = string.IsNullOrEmpty(searchText)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            EntriesView.Filter = null;
+        }
+        else
+        {
+            EntriesView.Filter = obj =>
+                obj is ClipboardEntry entry &&
+                FuzzyMatcher.FuzzyMatch(searchText, entry.TextContent);
+        }
+
+        UpdateEmptyState();
     }
 
     private void OnEntryClicked(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -286,13 +355,31 @@ public partial class TrayPopupWindow : Window
 
     private void OnEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        Dispatcher.Invoke(UpdateEmptyState);
+        Dispatcher.BeginInvoke(UpdateEmptyState,
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void UpdateEmptyState()
     {
-        var isEmpty = _historyManager.RecentEntries.Count == 0;
-        EmptyStateText.Visibility = isEmpty ? Visibility.Visible : Visibility.Collapsed;
-        EntriesListBox.Visibility = isEmpty ? Visibility.Collapsed : Visibility.Visible;
+        var totalCount = _historyManager.RecentEntries.Count;
+        var visibleCount = EntriesListBox.Items.Count;
+
+        if (totalCount == 0)
+        {
+            EmptyStateText.Text = "No clipboard entries yet";
+            EmptyStateText.Visibility = Visibility.Visible;
+            EntriesListBox.Visibility = Visibility.Collapsed;
+        }
+        else if (visibleCount == 0)
+        {
+            EmptyStateText.Text = "No matching entries";
+            EmptyStateText.Visibility = Visibility.Visible;
+            EntriesListBox.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            EmptyStateText.Visibility = Visibility.Collapsed;
+            EntriesListBox.Visibility = Visibility.Visible;
+        }
     }
 }

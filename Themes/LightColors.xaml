@@ -5,6 +5,7 @@
     <SolidColorBrush x:Key="PopupBorderBrush" Color="#FFD0D0D0"/>
     <SolidColorBrush x:Key="ItemHoverBrush" Color="#FFEBEBEB"/>
     <SolidColorBrush x:Key="ItemPressedBrush" Color="#FFDEDEDE"/>
+    <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#FFDEDEDE"/>
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FF1A1A1A"/>
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FF6E6E6E"/>
     <SolidColorBrush x:Key="AccentBrush" Color="#FF0078D4"/>
@@ -21,5 +22,6 @@
     <SolidColorBrush x:Key="InputHoverBorderBrush" Color="#FF999999"/>
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#FFB0B0B0"/>
     <SolidColorBrush x:Key="CaretBrush" Color="#FF1A1A1A"/>
+    <SolidColorBrush x:Key="PlaceholderTextBrush" Color="#FF999999"/>
 
 </ResourceDictionary>
