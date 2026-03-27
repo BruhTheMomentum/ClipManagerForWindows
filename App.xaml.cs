@@ -38,7 +38,12 @@ public partial class App : System.Windows.Application
         _host = Host.CreateDefaultBuilder(e.Args)
             .ConfigureAppConfiguration(config =>
             {
-                config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                var stream = assembly.GetManifestResourceStream("ClipManagerForWindows.appsettings.json");
+                if (stream != null)
+                    config.AddJsonStream(stream);
+                config.SetBasePath(AppContext.BaseDirectory)
+                      .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
             })
             .ConfigureLogging(logging =>
             {

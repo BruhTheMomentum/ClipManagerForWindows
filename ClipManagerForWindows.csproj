@@ -24,9 +24,7 @@
 			</ItemGroup>
 
 	<ItemGroup>
-		<None Update="appsettings.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
+		<EmbeddedResource Include="appsettings.json" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -34,9 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Include="Assets\clip.ico">
-		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Content>
+	  <EmbeddedResource Include="Assets\clip.ico" />
 	</ItemGroup>
 
 	<ItemGroup>

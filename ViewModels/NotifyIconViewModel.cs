@@ -110,7 +110,9 @@ public partial class NotifyIconViewModel : IDisposable
         _logger = logger;
 
         _notifyIcon = new NotifyIcon();
-        _notifyIcon.Icon = new Icon("Assets/clip.ico");
+        using var iconStream = typeof(NotifyIconViewModel).Assembly
+            .GetManifestResourceStream("ClipManagerForWindows.Assets.clip.ico");
+        _notifyIcon.Icon = new Icon(iconStream!);
         _notifyIcon.Text = "Clip Manager";
         _notifyIcon.Visible = true;
 
