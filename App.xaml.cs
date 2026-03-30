@@ -85,6 +85,7 @@ public partial class App : System.Windows.Application
         var settingsStore = _host.Services.GetRequiredService<ISettingsStore>();
         var savedTheme = settingsStore.GetAsync("Theme", System.Threading.CancellationToken.None).GetAwaiter().GetResult() ?? "System";
         ThemeManager.ApplyTheme(savedTheme);
+        ThemeManager.StartListening();
 
         // Initialize the tray icon view model which will in turn create the icon
         _host.Services.GetRequiredService<NotifyIconViewModel>();

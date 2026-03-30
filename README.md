@@ -2,6 +2,8 @@
 
 A simple clipboard manager for Windows, inspired by CopyClip for macOS.
 
+![Demo](media/demo.gif)
+
 ## Features
 
 *   **System Tray Icon**: Access all features from the system tray.

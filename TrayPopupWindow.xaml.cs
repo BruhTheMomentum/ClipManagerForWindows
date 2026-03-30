@@ -23,6 +23,7 @@ public partial class TrayPopupWindow : Window
     private readonly IHistoryManager _historyManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TrayPopupWindow> _logger;
+    private bool _isDeleting;
     public ObservableCollection<ClipboardEntry> RecentEntries => _historyManager.RecentEntries;
 
     private ICollectionView? EntriesView =>
@@ -42,7 +43,10 @@ public partial class TrayPopupWindow : Window
         InitializeComponent();
         DataContext = this;
 
-        Deactivated += (_, _) => HidePopup();
+        Deactivated += (_, _) =>
+        {
+            if (!_isDeleting) HidePopup();
+        };
 
         // Handle delete button clicks from DataTemplate via routed event
         EntriesListBox.AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent,
@@ -207,6 +211,9 @@ public partial class TrayPopupWindow : Window
 
     private async Task AnimateAndDeleteAsync(ClipboardEntry entry)
     {
+        _isDeleting = true;
+        try
+        {
         var container = EntriesListBox.ItemContainerGenerator.ContainerFromItem(entry) as ListBoxItem;
         if (container != null)
         {
@@ -290,6 +297,15 @@ public partial class TrayPopupWindow : Window
         }
 
         await _historyManager.DeleteAsync(entry.Id, CancellationToken.None);
+
+        // Force AlternationIndex refresh so badges shift to the new first 3 items
+        EntriesListBox.ItemsSource = null;
+        EntriesListBox.ItemsSource = RecentEntries;
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
     }
 
     private void OnSettingsClick(object sender, RoutedEventArgs e)

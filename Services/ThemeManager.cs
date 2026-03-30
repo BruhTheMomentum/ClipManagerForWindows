@@ -9,9 +9,12 @@ public static class ThemeManager
 {
     private const string DarkColorsUri = "Themes/DarkColors.xaml";
     private const string LightColorsUri = "Themes/LightColors.xaml";
+    private static string _currentThemeSetting = "System";
 
     public static void ApplyTheme(string theme)
     {
+        _currentThemeSetting = theme;
+
         var isLight = theme switch
         {
             "Light" => true,
@@ -34,6 +37,19 @@ public static class ThemeManager
 
         // Add at end for highest priority in WPF resource lookup
         mergedDictionaries.Add(newColors);
+    }
+
+    public static void StartListening()
+    {
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+    }
+
+    private static void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category == UserPreferenceCategory.General && _currentThemeSetting == "System")
+        {
+            Application.Current.Dispatcher.Invoke(() => ApplyTheme("System"));
+        }
     }
 
     private static bool IsSystemLightTheme()
